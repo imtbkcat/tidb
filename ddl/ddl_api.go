@@ -37,6 +37,7 @@ import (
 	"github.com/pingcap/tidb/sessionctx/variable"
 	"github.com/pingcap/tidb/table"
 	"github.com/pingcap/tidb/types"
+	"github.com/pingcap/tidb/util/format"
 	"github.com/pingcap/tidb/util/schemautil"
 )
 
@@ -286,6 +287,14 @@ func isExplicitTimeStamp() bool {
 // outPriKeyConstraint is the primary key constraint out of column definition. such as: create table t1 (id int , age int, primary key(id));
 func columnDefToCol(ctx sessionctx.Context, offset int, colDef *ast.ColumnDef, outPriKeyConstraint *ast.Constraint) (*table.Column, []*ast.Constraint, error) {
 	var constraints = make([]*ast.Constraint, 0)
+
+	// Delete trailing spaces for enum and set type
+	if colDef.Tp.Tp == mysql.TypeEnum || colDef.Tp.Tp == mysql.TypeSet {
+		for i := 0; i < len(colDef.Tp.Elems); i++ {
+			colDef.Tp.Elems[i] = format.FormatEnumAndSet(colDef.Tp.Elems[i])
+		}
+	}
+
 	col := table.ToColumn(&model.ColumnInfo{
 		Offset:    offset,
 		Name:      colDef.Name.Name,

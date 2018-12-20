@@ -316,6 +316,20 @@ func (s *testSuite) TestShow(c *C) {
 		c.Check(r, Equals, expectedRow[i])
 	}
 
+	// for mysql_test/type_set.test
+	tk.MustExec("drop table if exists t1")
+	testSQL = `create table t1 ( a set(' ', 'a b ') not null);`
+	tk.MustExec(testSQL)
+	testSQL = "show create table t1;"
+	result = tk.MustQuery(testSQL)
+	c.Check(result.Rows(), HasLen, 1)
+	row = result.Rows()[0]
+	expectedRow = []interface{}{
+		"t1", "CREATE TABLE `t1` (\n  `a` set('','a b') NOT NULL\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin"}
+	for i, r := range row {
+		c.Check(r, Equals, expectedRow[i])
+	}
+
 	// for issue #4255
 	result = tk.MustQuery(`show function status like '%'`)
 	result.Check(result.Rows())
