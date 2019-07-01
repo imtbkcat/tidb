@@ -47,11 +47,11 @@ func init() {
 		err := dec.FromString(hack.Slice(str))
 		return dec, err
 	}
-	ast.NewHexLiteral = func(str string) (interface{}, error) {
+	ast.NewHexLiteral = func(str string) (ast.BinaryLiteral, error) {
 		h, err := types.NewHexLiteral(str)
 		return h, err
 	}
-	ast.NewBitLiteral = func(str string) (interface{}, error) {
+	ast.NewBitLiteral = func(str string) (ast.BinaryLiteral, error) {
 		b, err := types.NewBitLiteral(str)
 		return b, err
 	}

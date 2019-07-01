@@ -183,6 +183,10 @@ func NewBitLiteral(s string) (BitLiteral, error) {
 	return BitLiteral(b), nil
 }
 
+func (h BitLiteral) ToString() string {
+	return string(h)
+}
+
 // ParseHexStr parses hexadecimal string literal.
 // See https://dev.mysql.com/doc/refman/5.7/en/hexadecimal-literals.html
 func ParseHexStr(s string) (BinaryLiteral, error) {
@@ -224,4 +228,8 @@ func NewHexLiteral(s string) (HexLiteral, error) {
 		return HexLiteral{}, err
 	}
 	return HexLiteral(h), nil
+}
+
+func (h HexLiteral) ToString() string {
+	return string(h)
 }
