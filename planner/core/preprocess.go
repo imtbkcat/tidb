@@ -47,7 +47,7 @@ func InTxnRetry(p *preprocessor) {
 
 // Preprocess resolves table names of the node, and checks some statements validation.
 func Preprocess(ctx sessionctx.Context, node ast.Node, is infoschema.InfoSchema, preprocessOpt ...PreprocessOpt) error {
-	v := preprocessor{is: is, ctx: ctx, tableAliasInJoin: make([]map[string]interface{}, 0), isReadOnly:false}
+	v := preprocessor{is: is, ctx: ctx, tableAliasInJoin: make([]map[string]interface{}, 0)}
 	for _, optFn := range preprocessOpt {
 		optFn(&v)
 	}

@@ -178,12 +178,12 @@ func (a *ExecStmt) IsPrepared() bool {
 // then using ast.IsReadOnly function to determine a statement is read only or not.
 func (a *ExecStmt) IsReadOnly(vars *variable.SessionVars) bool {
 	if execStmt, ok := a.StmtNode.(*ast.ExecuteStmt); ok {
-		s, err := getPreparedStmt(execStmt, vars)
+		s, err := getIsReadOnlyFromPreparedStmt(execStmt, vars)
 		if err != nil {
 			logutil.BgLogger().Error("getPreparedStmt failed", zap.Error(err))
 			return false
 		}
-		return vars.PreparedParams
+		return s
 	}
 	return ast.IsReadOnly(a.StmtNode)
 }

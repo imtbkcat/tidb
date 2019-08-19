@@ -173,7 +173,7 @@ func (e *PrepareExec) Next(ctx context.Context, req *chunk.Chunk) error {
 		StmtType:      GetStmtLabel(stmt),
 		Params:        sorter.markers,
 		SchemaVersion: e.is.SchemaMetaVersion(),
-		isReadOnly: isReadOnly,
+		IsReadOnly: isReadOnly,
 	}
 	prepared.UseCache = plannercore.PreparedPlanCacheEnabled() && (vars.LightningMode || plannercore.Cacheable(stmt))
 
