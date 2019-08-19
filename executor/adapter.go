@@ -183,7 +183,7 @@ func (a *ExecStmt) IsReadOnly(vars *variable.SessionVars) bool {
 			logutil.BgLogger().Error("getPreparedStmt failed", zap.Error(err))
 			return false
 		}
-		return ast.IsReadOnly(s)
+		return vars.PreparedParams
 	}
 	return ast.IsReadOnly(a.StmtNode)
 }

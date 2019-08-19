@@ -157,6 +157,8 @@ func (e *PrepareExec) Next(ctx context.Context, req *chunk.Chunk) error {
 		return err
 	}
 
+	isReadOnly := ast.IsReadOnly(stmt)
+
 	// The parameter markers are appended in visiting order, which may not
 	// be the same as the position order in the query string. We need to
 	// sort it by position.
@@ -171,6 +173,7 @@ func (e *PrepareExec) Next(ctx context.Context, req *chunk.Chunk) error {
 		StmtType:      GetStmtLabel(stmt),
 		Params:        sorter.markers,
 		SchemaVersion: e.is.SchemaMetaVersion(),
+		isReadOnly: isReadOnly,
 	}
 	prepared.UseCache = plannercore.PreparedPlanCacheEnabled() && (vars.LightningMode || plannercore.Cacheable(stmt))
 
@@ -304,4 +307,18 @@ func getPreparedStmt(stmt *ast.ExecuteStmt, vars *variable.SessionVars) (ast.Stm
 		return prepared.Stmt, nil
 	}
 	return nil, plannercore.ErrStmtNotFound
+}
+
+func getIsReadOnlyFromPreparedStmt(stmt *ast.ExecuteStmt, vars *variable.SessionVars) (bool, error) {
+	var ok bool
+	execID := stmt.ExecID
+	if stmt.Name != "" {
+		if execID, ok = vars.PreparedStmtNameToID[stmt.Name]; !ok {
+			return false, plannercore.ErrStmtNotFound
+		}
+	}
+	if prepared, ok := vars.PreparedStmts[execID]; ok {
+		return prepared.IsReadOnly, nil
+	}
+	return false, plannercore.ErrStmtNotFound
 }
