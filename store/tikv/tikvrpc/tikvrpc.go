@@ -656,7 +656,11 @@ func CallRPC(ctx context.Context, client tikvpb.TikvClient, req *Request) (*Resp
 	start := time.Now()
 	reqType := req.Type.String()
 	storeID := strconv.FormatUint(req.Context.GetPeer().GetStoreId(), 10)
-	defer metrics.TiKVgRPCRequestDuration.WithLabelValues(reqType, storeID).Observe(time.Since(start).Seconds())
+
+	defer func() {
+		metrics.TiKVgRPCRequestDuration.WithLabelValues(reqType, storeID).Observe(time.Since(start).Seconds())
+	}()
+
 	resp := &Response{}
 	var err error
 	switch req.Type {

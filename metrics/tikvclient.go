@@ -230,6 +230,6 @@ var (
 			Subsystem: "tikvclient",
 			Name:      "grpc_request_seconds",
 			Help:      "Bucketed histogram of sending gRPC request duration.",
-			Buckets:   prometheus.ExponentialBuckets(0.0005, 2, 20), // 0.5ms ~ 524s
+			Buckets:   prometheus.ExponentialBuckets(0.0004, 2, 20), // 0.5ms ~ 524s
 		}, []string{LblType, "store"})
 )
