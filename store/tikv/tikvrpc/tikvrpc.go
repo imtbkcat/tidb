@@ -16,6 +16,8 @@ package tikvrpc
 import (
 	"context"
 	"fmt"
+	"github.com/pingcap/tidb/metrics"
+	"strconv"
 	"sync/atomic"
 	"time"
 
@@ -651,6 +653,10 @@ func (resp *Response) GetRegionError() (*errorpb.Error, error) {
 // ch is needed to implement timeout for coprocessor streaing, the stream object's
 // cancel function will be sent to the channel, together with a lease checked by a background goroutine.
 func CallRPC(ctx context.Context, client tikvpb.TikvClient, req *Request) (*Response, error) {
+	start := time.Now()
+	reqType := req.Type.String()
+	storeID := strconv.FormatUint(req.Context.GetPeer().GetStoreId(), 10)
+	defer metrics.TiKVgRPCRequestDuration.WithLabelValues(reqType, storeID).Observe(time.Since(start).Seconds())
 	resp := &Response{}
 	var err error
 	switch req.Type {
