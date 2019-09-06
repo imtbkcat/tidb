@@ -446,7 +446,6 @@ func (s *session) doCommitWithRetry(ctx context.Context) error {
 	if s.txn.Valid() {
 		txnSize = s.txn.Size()
 		isPessimistic = s.txn.IsPessimistic()
-		fmt.Println(isPessimistic)
 	}
 	if span := opentracing.SpanFromContext(ctx); span != nil && span.Tracer() != nil {
 		span1 := span.Tracer().StartSpan("session.doCommitWitRetry", opentracing.ChildOf(span.Context()))

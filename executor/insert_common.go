@@ -238,7 +238,7 @@ func insertRows(ctx context.Context, base insertCommon) (err error) {
 				for i := 0; i < len(e.Lists); i += 2 {
 					var row []types.Datum
 					row, _ = evalRowFunc(ctx, e.Lists[i], i)
-					rows2 = append(rows, row)
+					rows2 = append(rows2, row)
 				}
 			}()
 			go func() {
@@ -246,13 +246,13 @@ func insertRows(ctx context.Context, base insertCommon) (err error) {
 				for i := 1; i < len(e.Lists); i += 2 {
 					var row []types.Datum
 					row, _ = evalRowFunc(ctx, e.Lists[i], i)
-					rows1 = append(rows, row)
+					rows1 = append(rows1, row)
 				}
 			}()
 			wg.Wait()
 
 			cnt1, cnt2 := 0, 0
-			for i := 1; i < len(e.Lists); i++ {
+			for i := 0; i < len(e.Lists); i++ {
 				e.rowCount++
 				if i % 2 == 0 {
 					rows = append(rows, rows2[cnt2])
