@@ -227,38 +227,59 @@ func insertRows(ctx context.Context, base insertCommon) (err error) {
 			}
 		}
 	} else {
-		rows1 := make([][]types.Datum, 0, len(e.Lists))
-		rows2 := make([][]types.Datum, 0, len(e.Lists))
+		if len(e.Lists) > 10 {
+			rows1 := make([][]types.Datum, 0, len(e.Lists))
+			rows2 := make([][]types.Datum, 0, len(e.Lists))
 
-		var wg sync.WaitGroup
-		wg.Add(2)
-		go func() {
-			defer wg.Done()
-			for i := 0; i < len(e.Lists); i += 2 {
-				var row []types.Datum
-				row, _ = evalRowFunc(ctx, e.Lists[i], i)
-				rows2 = append(rows, row)
-			}
-		}()
-		go func() {
-			defer wg.Done()
-			for i := 1; i < len(e.Lists); i += 2 {
-				var row []types.Datum
-				row, _ = evalRowFunc(ctx, e.Lists[i], i)
-				rows1 = append(rows, row)
-			}
-		}()
-		wg.Wait()
+			var wg sync.WaitGroup
+			wg.Add(2)
+			go func() {
+				defer wg.Done()
+				for i := 0; i < len(e.Lists); i += 2 {
+					var row []types.Datum
+					row, _ = evalRowFunc(ctx, e.Lists[i], i)
+					rows2 = append(rows, row)
+				}
+			}()
+			go func() {
+				defer wg.Done()
+				for i := 1; i < len(e.Lists); i += 2 {
+					var row []types.Datum
+					row, _ = evalRowFunc(ctx, e.Lists[i], i)
+					rows1 = append(rows, row)
+				}
+			}()
+			wg.Wait()
 
-		cnt1, cnt2 := 0, 0
-		for i := 1; i < len(e.Lists); i++ {
-			e.rowCount++
-			if i % 2 == 0 {
-				rows = append(rows, rows2[cnt2])
-				cnt2++
-			} else {
-				rows = append(rows, rows1[cnt1])
-				cnt1++
+			cnt1, cnt2 := 0, 0
+			for i := 1; i < len(e.Lists); i++ {
+				e.rowCount++
+				if i % 2 == 0 {
+					rows = append(rows, rows2[cnt2])
+					cnt2++
+				} else {
+					rows = append(rows, rows1[cnt1])
+					cnt1++
+				}
+			}
+		} else {
+			for i, list := range e.Lists {
+				e.rowCount++
+				var row []types.Datum
+				row, err = evalRowFunc(ctx, list, i)
+				if err != nil {
+					return err
+				}
+				rows = append(rows, row)
+				if batchInsert && e.rowCount%uint64(batchSize) == 0 {
+					if err = base.exec(ctx, rows); err != nil {
+						return err
+					}
+					rows = rows[:0]
+					if err = e.doBatchInsert(ctx); err != nil {
+						return err
+					}
+				}
 			}
 		}
 	}
