@@ -446,6 +446,7 @@ func (s *session) doCommitWithRetry(ctx context.Context) error {
 	if s.txn.Valid() {
 		txnSize = s.txn.Size()
 		isPessimistic = s.txn.IsPessimistic()
+		fmt.Println(isPessimistic)
 	}
 	if span := opentracing.SpanFromContext(ctx); span != nil && span.Tracer() != nil {
 		span1 := span.Tracer().StartSpan("session.doCommitWitRetry", opentracing.ChildOf(span.Context()))
@@ -509,7 +510,6 @@ func (s *session) CommitTxn(ctx context.Context) error {
 		defer span1.Finish()
 		ctx = opentracing.ContextWithSpan(ctx, span1)
 	}
-
 	var commitDetail *execdetails.CommitDetails
 	ctx = context.WithValue(ctx, execdetails.CommitDetailCtxKey, &commitDetail)
 	err := s.doCommitWithRetry(ctx)
@@ -1194,7 +1194,7 @@ func (s *session) Txn(active bool) (kv.Transaction, error) {
 			return &s.txn, err
 		}
 		s.sessionVars.TxnCtx.StartTS = s.txn.StartTS()
-		if s.sessionVars.TxnCtx.IsPessimistic {
+		if s.sessionVars.TxnCtx.IsPessimistic && !s.sessionVars.StmtCtx.InLoadDataStmt {
 			s.txn.SetOption(kv.Pessimistic, true)
 		}
 		if !s.sessionVars.IsAutocommit() {
