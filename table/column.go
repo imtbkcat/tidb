@@ -162,6 +162,41 @@ func handleWrongUtf8Value(ctx sessionctx.Context, col *model.ColumnInfo, casted 
 	return truncateVal, err
 }
 
+func MiscProcess(ctx sessionctx.Context, casted types.Datum, col *model.ColumnInfo) (types.Datum, error) {
+	if col.Tp == mysql.TypeString && !types.IsBinaryStr(&col.FieldType) {
+		truncateTrailingSpaces(&casted)
+	}
+
+	if ctx.GetSessionVars().SkipUTF8Check {
+		return casted, nil
+	}
+	if !mysql.IsUTF8Charset(col.Charset) {
+		return casted, nil
+	}
+	var err error
+	str := casted.GetString()
+	utf8Charset := col.Charset == mysql.UTF8Charset
+	doMB4CharCheck := utf8Charset && config.GetGlobalConfig().CheckMb4ValueInUTF8
+	for i, w := 0, 0; i < len(str); i += w {
+		runeValue, width := utf8.DecodeRuneInString(str[i:])
+		if runeValue == utf8.RuneError {
+			if strings.HasPrefix(str[i:], string(utf8.RuneError)) {
+				w = width
+				continue
+			}
+			casted, err = handleWrongUtf8Value(ctx, col, &casted, str, i)
+			break
+		} else if width > 3 && doMB4CharCheck {
+			// Handle non-BMP characters.
+			casted, err = handleWrongUtf8Value(ctx, col, &casted, str, i)
+			break
+		}
+		w = width
+	}
+
+	return casted, err
+}
+
 // CastValue casts a value based on column type.
 func CastValue(ctx sessionctx.Context, val types.Datum, col *model.ColumnInfo) (casted types.Datum, err error) {
 	sc := ctx.GetSessionVars().StmtCtx

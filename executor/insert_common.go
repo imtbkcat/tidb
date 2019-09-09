@@ -301,7 +301,12 @@ func (e *InsertValues) fastEvalRow(ctx context.Context, list []expression.Expres
 		if err = e.handleErr(e.insertColumns[i], &val, rowIdx, err); err != nil {
 			return nil, err
 		}
-		val1, err := table.CastValue(e.ctx, val, e.insertColumns[i].ToInfo())
+		var val1 types.Datum
+		if con.RetType.Equal(&e.insertColumns[i].ToInfo().FieldType) {
+			val1, err = table.MiscProcess(e.ctx, val, e.insertColumns[i].ToInfo())
+		} else {
+			val1, err = table.CastValue(e.ctx, val, e.insertColumns[i].ToInfo())
+		}
 		if err = e.handleErr(e.insertColumns[i], &val, rowIdx, err); err != nil {
 			return nil, err
 		}
