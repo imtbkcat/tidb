@@ -297,16 +297,14 @@ func (e *InsertValues) fastEvalRow(ctx context.Context, list []expression.Expres
 	hasValue := make([]bool, rowLen)
 	for i, expr := range list {
 		con := expr.(*expression.Constant)
+		con.RetType = &e.insertColumns[i].ToInfo().FieldType
 		val, err := con.Eval(emptyRow)
 		if err = e.handleErr(e.insertColumns[i], &val, rowIdx, err); err != nil {
 			return nil, err
 		}
-		var val1 types.Datum
-		if con.RetType.Equal(&e.insertColumns[i].ToInfo().FieldType) {
-			val1, err = table.MiscProcess(e.ctx, val, e.insertColumns[i].ToInfo())
-		} else {
-			val1, err = table.CastValue(e.ctx, val, e.insertColumns[i].ToInfo())
-		}
+		// fmt.Println(e.insertColumns[i].ToInfo().FieldType.String(), con.RetType.String())
+		val1, err := table.MiscProcess(e.ctx, val, e.insertColumns[i].ToInfo())
+		//val1, err = table.CastValue(e.ctx, val, e.insertColumns[i].ToInfo())
 		if err = e.handleErr(e.insertColumns[i], &val, rowIdx, err); err != nil {
 			return nil, err
 		}
