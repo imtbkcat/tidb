@@ -240,7 +240,9 @@ func runStmt(ctx context.Context, sctx sessionctx.Context, s sqlexec.Statement) 
 				if err != nil {
 					sctx.StmtRollback()
 				} else {
+					logutil.Event(ctx, "start StmtCommit")
 					err = sctx.StmtCommit()
+					logutil.Event(ctx, "end StmtCommit")
 				}
 			}
 		} else {
