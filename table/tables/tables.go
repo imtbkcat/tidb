@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/binary"
 	"math"
+	"math/rand"
 	"strconv"
 	"strings"
 
@@ -966,10 +967,8 @@ func (t *tableCommon) AllocHandle(ctx sessionctx.Context) (int64, error) {
 			return 0, autoid.ErrAutoincReadFailed
 		}
 		txnCtx := ctx.GetSessionVars().TxnCtx
-		if txnCtx.Shard == nil {
-			shard := t.calcShard(txnCtx.StartTS)
-			txnCtx.Shard = &shard
-		}
+		shard := t.calcShard(txnCtx.StartTS)
+		txnCtx.Shard = &shard
 		rowID |= *txnCtx.Shard
 	}
 	return rowID, nil
@@ -983,7 +982,7 @@ func OverflowShardBits(rowID int64, shardRowIDBits uint64) bool {
 
 func (t *tableCommon) calcShard(startTS uint64) int64 {
 	var buf [8]byte
-	binary.LittleEndian.PutUint64(buf[:], startTS)
+	binary.LittleEndian.PutUint64(buf[:], rand.Uint64())
 	hashVal := int64(murmur3.Sum32(buf[:]))
 	return (hashVal & (1<<t.meta.ShardRowIDBits - 1)) << (64 - t.meta.ShardRowIDBits - 1)
 }
