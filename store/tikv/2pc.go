@@ -1055,7 +1055,7 @@ func (c *twoPhaseCommitter) shouldWriteBinlog() bool {
 
 // TiKV recommends each RPC packet should be less than ~1MB. We keep each packet's
 // Key+Value size below 16KB.
-const txnCommitBatchSize = 6 * 1024 * 1024
+const txnCommitBatchSize = 3 * 1024 * 1024
 
 // batchKeys is a batch of keys in the same region.
 type batchKeys struct {
