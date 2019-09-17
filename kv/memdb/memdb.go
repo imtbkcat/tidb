@@ -32,6 +32,15 @@ type DB struct {
 
 	length int
 	size   int
+
+	hint Hint
+}
+
+type Hint struct {
+	height  int
+	prevKey []byte
+	prev    [maxHeight + 1]nodeWithAddr
+	next    [maxHeight + 1]nodeWithAddr
 }
 
 // New creates a new initialized in-memory key/value DB.
@@ -68,24 +77,62 @@ func (db *DB) Get(key []byte) []byte {
 
 // Put sets the value for the given key.
 // It overwrites any previous value for that key.
-func (db *DB) Put(key []byte, v []byte) bool {
+func (db *DB) Put(key []byte, v []byte) {
+	hint := &db.hint
+
+	// TODO
+	isSeq := bytes.Compare(hint.prevKey, key) <= 0
+
 	arena := db.arena
 	lsHeight := db.height
-	var prev [maxHeight + 1]nodeWithAddr
-	var next [maxHeight + 1]nodeWithAddr
-	prev[lsHeight] = db.head
+	recomputeHeight := 0
+
+	if hint.height < lsHeight || !isSeq {
+		hint.prev[lsHeight] = db.head
+		hint.next[lsHeight] = nodeWithAddr{}
+		hint.height = lsHeight
+		recomputeHeight = lsHeight
+	} else {
+		for recomputeHeight < lsHeight {
+			prevNext := hint.prev[recomputeHeight].nexts[recomputeHeight]
+			if prevNext != hint.next[recomputeHeight].addr {
+				recomputeHeight++
+				continue
+			}
+
+			prev := hint.prev[recomputeHeight]
+			if prev != db.head && !prev.addr.isNull() && bytes.Compare(key, prev.getKey(arena.getFrom(prev.addr))) <= 0 {
+				for prev.addr == hint.prev[recomputeHeight].addr {
+					recomputeHeight++
+				}
+				continue
+			}
+
+			next := hint.next[recomputeHeight]
+			if !next.addr.isNull() && bytes.Compare(key, next.getKey(arena.getFrom(next.addr))) > 0 {
+				for next.addr == hint.next[recomputeHeight].addr {
+					recomputeHeight++
+				}
+				continue
+			}
+
+			break
+		}
+	}
 
 	var exists bool
-	for i := lsHeight - 1; i >= 0; i-- {
-		// Use higher level to speed up for current level.
-		prev[i], next[i], exists = db.findSpliceForLevel(db.arena, key, prev[i+1], i)
+	if recomputeHeight > 0 {
+		for i := recomputeHeight - 1; i >= 0; i-- {
+			// Use higher level to speed up for current level.
+			hint.prev[i], hint.next[i], exists = db.findSpliceForLevel(db.arena, key, hint.prev[i+1], i)
+		}
 	}
 
 	var height int
 	if !exists {
 		height = db.randomHeight()
 	} else {
-		height = db.prepareOverwrite(next[:])
+		height = db.prepareOverwrite(hint.next[:])
 	}
 
 	x, addr := db.newNode(arena, key, v, height)
@@ -96,21 +143,22 @@ func (db *DB) Put(key []byte, v []byte) bool {
 	// We always insert from the base level and up. After you add a node in base level, we cannot
 	// create a node in the level above because it would have discovered the node in the base level.
 	for i := 0; i < height; i++ {
-		x.nexts[i] = next[i].addr
-		if prev[i].node == nil {
-			prev[i] = db.head
+		x.nexts[i] = hint.next[i].addr
+		if hint.prev[i].node == nil {
+			hint.prev[i] = db.head
 		}
-		prev[i].nexts[i] = addr
+		hint.prev[i].nexts[i] = addr
 	}
 
-	x.prev = prev[0].addr
-	if next[0].node != nil {
-		next[0].prev = addr
+	x.prev = hint.prev[0].addr
+	if hint.next[0].node != nil {
+		hint.next[0].prev = addr
 	}
 
 	db.length++
 	db.size += len(key) + len(v)
-	return true
+
+	db.hint.prevKey = append(db.hint.prevKey[:0], key...)
 }
 
 // The pointers in findSpliceForLevel may point to the node which going to be overwrite,

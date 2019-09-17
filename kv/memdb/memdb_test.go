@@ -316,7 +316,7 @@ func (s testMemDBSuite) fillDB(cnt int) *DB {
 func BenchmarkLargeIndex(b *testing.B) {
 	buf := make([][valueSize]byte, 10000000)
 	for i := range buf {
-		binary.LittleEndian.PutUint32(buf[i][:], uint32(i))
+		binary.BigEndian.PutUint32(buf[i][:], uint32(i))
 	}
 	p := New(4 * 1024 * 1024)
 	b.ResetTimer()
@@ -329,7 +329,7 @@ func BenchmarkLargeIndex(b *testing.B) {
 func BenchmarkPut(b *testing.B) {
 	buf := make([][valueSize]byte, b.N)
 	for i := range buf {
-		binary.LittleEndian.PutUint32(buf[i][:], uint32(i))
+		binary.BigEndian.PutUint32(buf[i][:], uint32(i))
 	}
 
 	p := New(4 * 1024 * 1024)
@@ -343,7 +343,7 @@ func BenchmarkPut(b *testing.B) {
 func BenchmarkPutRandom(b *testing.B) {
 	buf := make([][valueSize]byte, b.N)
 	for i := range buf {
-		binary.LittleEndian.PutUint32(buf[i][:], uint32(rand.Int()))
+		binary.BigEndian.PutUint32(buf[i][:], uint32(rand.Int()))
 	}
 
 	p := New(4 * 1024 * 1024)
@@ -357,7 +357,7 @@ func BenchmarkPutRandom(b *testing.B) {
 func BenchmarkGet(b *testing.B) {
 	buf := make([][valueSize]byte, b.N)
 	for i := range buf {
-		binary.LittleEndian.PutUint32(buf[i][:], uint32(i))
+		binary.BigEndian.PutUint32(buf[i][:], uint32(i))
 	}
 
 	p := New(4 * 1024 * 1024)
@@ -374,7 +374,7 @@ func BenchmarkGet(b *testing.B) {
 func BenchmarkGetRandom(b *testing.B) {
 	buf := make([][valueSize]byte, b.N)
 	for i := range buf {
-		binary.LittleEndian.PutUint32(buf[i][:], uint32(i))
+		binary.BigEndian.PutUint32(buf[i][:], uint32(i))
 	}
 
 	p := New(4 * 1024 * 1024)
