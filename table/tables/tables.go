@@ -456,7 +456,7 @@ func (t *tableCommon) AddRecord(ctx sessionctx.Context, r []types.Datum, opts ..
 	// Currently, only insert can set _tidb_rowid, update can not update _tidb_rowid.
 	rstat, ok := opt.Ctx.Value(StatKey{}).(*AddRecordStat)
 
-	misc := time.Now()
+
 	if len(r) > len(cols) && !opt.IsUpdate {
 		// The last value is _tidb_rowid.
 		recordID = r[len(r)-1].GetInt64()
@@ -469,9 +469,6 @@ func (t *tableCommon) AddRecord(ctx sessionctx.Context, r []types.Datum, opts ..
 				break
 			}
 		}
-	}
-	if ok {
-		rstat.Misc += time.Since(misc)
 	}
 
 	if !hasRecordID {
@@ -491,7 +488,7 @@ func (t *tableCommon) AddRecord(ctx sessionctx.Context, r []types.Datum, opts ..
 	}
 
 	sessVars := ctx.GetSessionVars()
-
+	misc := time.Now()
 	rm, err := t.getRollbackableMemStore(ctx)
 	var createIdxOpts []table.CreateIdxOptFunc
 	if len(opts) > 0 {
@@ -506,6 +503,9 @@ func (t *tableCommon) AddRecord(ctx sessionctx.Context, r []types.Datum, opts ..
 	h, err := t.addIndices(ctx, recordID, r, rm, createIdxOpts)
 	if err != nil {
 		return h, err
+	}
+	if ok {
+		rstat.Misc += time.Since(misc)
 	}
 
 	var colIDs, binlogColIDs []int64
