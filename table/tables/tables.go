@@ -531,12 +531,18 @@ func (t *tableCommon) AddRecord(ctx sessionctx.Context, r []types.Datum, opts ..
 		return 0, err
 	}
 	value := writeBufs.RowValBuf
-	rstat := opt.Ctx.Value(StatKey{}).(*AddRecordStat)
-	s1 := time.Now()
-	if err = txn.Set(key, value); err != nil {
-		return 0, err
+	rstat, ok := opt.Ctx.Value(StatKey{}).(*AddRecordStat)
+	if ok {
+		s1 := time.Now()
+		if err = txn.Set(key, value); err != nil {
+			return 0, err
+		}
+		rstat.TotalAddTable += time.Since(s1)
+	} else {
+		if err = txn.Set(key, value); err != nil {
+			return 0, err
+		}
 	}
-	rstat.TotalAddTable += time.Since(s1)
 	txn.SetAssertion(key, kv.None)
 
 	if !sessVars.LightningMode {
