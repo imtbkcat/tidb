@@ -226,7 +226,9 @@ func runStmt(ctx context.Context, sctx sessionctx.Context, s sqlexec.Statement) 
 	if err != nil {
 		return nil, err
 	}
+	logutil.Event(ctx, "start Exec")
 	rs, err = s.Exec(ctx)
+	logutil.Event(ctx, "end Exec")
 	sessVars.TxnCtx.StatementCount++
 	if !s.IsReadOnly(sessVars) {
 		// All the history should be added here.
