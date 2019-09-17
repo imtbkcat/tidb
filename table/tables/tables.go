@@ -24,6 +24,7 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/parser/model"
@@ -60,6 +61,12 @@ type tableCommon struct {
 	// recordPrefix and indexPrefix are generated using physicalTableID.
 	recordPrefix kv.Key
 	indexPrefix  kv.Key
+}
+
+type StatKey struct {}
+
+type AddRecordStat struct {
+	TotalAddTable time.Duration
 }
 
 // Table implements table.Table interface.
@@ -524,9 +531,12 @@ func (t *tableCommon) AddRecord(ctx sessionctx.Context, r []types.Datum, opts ..
 		return 0, err
 	}
 	value := writeBufs.RowValBuf
+	rstat := opt.Ctx.Value(StatKey{}).(*AddRecordStat)
+	s1 := time.Now()
 	if err = txn.Set(key, value); err != nil {
 		return 0, err
 	}
+	rstat.TotalAddTable += time.Since(s1)
 	txn.SetAssertion(key, kv.None)
 
 	if !sessVars.LightningMode {

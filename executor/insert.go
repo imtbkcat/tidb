@@ -85,11 +85,15 @@ func (e *InsertExec) exec(ctx context.Context, rows [][]types.Datum) error {
 			}
 			return tblName
 		}))
+		var rstat *tables.AddRecordStat
+		rstat = &tables.AddRecordStat{TotalAddTable:0}
+		ctx = context.WithValue(ctx, tables.StatKey{}, rstat)
 		for _, row := range rows {
 			if _, err := e.addRecord(ctx, row); err != nil {
 				return err
 			}
 		}
+		logutil.Eventf(ctx, "add record stat %v", rstat)
 		logutil.Eventf(ctx, "addrecord %d rows into table `%s` ends", len(rows), stringutil.MemoizeStr(func() string {
 			var tblName string
 			if meta := e.Table.Meta(); meta != nil {
