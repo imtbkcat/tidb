@@ -504,31 +504,6 @@ func (t *tableCommon) AddRecord(ctx sessionctx.Context, r []types.Datum, opts ..
 	colIDs = make([]int64, 0, len(r))
 	row = make([]types.Datum, 0, len(r))
 
-	for _, col := range t.WritableCols() {
-		var value types.Datum
-		// Update call `AddRecord` will already handle the write only column default value.
-		// Only insert should add default value for write only column.
-		if col.State != model.StatePublic && !opt.IsUpdate {
-			// If col is in write only or write reorganization state, we must add it with its default value.
-			value, err = table.GetColOriginDefaultValue(ctx, col.ToInfo())
-			if err != nil {
-				return 0, err
-			}
-			// add value to `r` for dirty db in transaction.
-			// Otherwise when update will panic cause by get value of column in write only state from dirty db.
-			if col.Offset < len(r) {
-				r[col.Offset] = value
-			} else {
-				r = append(r, value)
-			}
-		} else {
-			value = r[col.Offset]
-		}
-		if !t.canSkip(col, value) {
-			colIDs = append(colIDs, col.ID)
-			row = append(row, value)
-		}
-	}
 	writeBufs := sessVars.GetWriteStmtBufs()
 	adjustRowValuesBuf(writeBufs, len(row))
 	key := t.RecordKey(recordID)
@@ -549,7 +524,7 @@ func (t *tableCommon) AddRecord(ctx sessionctx.Context, r []types.Datum, opts ..
 	if ok {
 		rstat.TotalAddTable += time.Since(s1)
 	}
-	txn.SetAssertion(key, kv.None)
+	// txn.SetAssertion(key, kv.None)
 
 	if !sessVars.LightningMode {
 		if err = rm.(*kv.BufferStore).SaveTo(txn); err != nil {
@@ -576,7 +551,7 @@ func (t *tableCommon) AddRecord(ctx sessionctx.Context, r []types.Datum, opts ..
 		}
 		colSize[col.ID] = int64(size) - 1
 	}
-	sessVars.TxnCtx.UpdateDeltaForTable(t.physicalTableID, 1, 1, colSize)
+	// sessVars.TxnCtx.UpdateDeltaForTable(t.physicalTableID, 1, 1, colSize)
 	return recordID, nil
 }
 
