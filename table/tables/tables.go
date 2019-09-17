@@ -69,6 +69,8 @@ type AddRecordStat struct {
 	TotalAddTable time.Duration
 	TotalEncode time.Duration
 	TotalAllocID time.Duration
+	Total time.Duration
+	Misc  time.Duration
 }
 
 // Table implements table.Table interface.
@@ -448,10 +450,13 @@ func (t *tableCommon) AddRecord(ctx sessionctx.Context, r []types.Datum, opts ..
 	}
 	var hasRecordID bool
 	cols := t.Cols()
+	tot := time.Now()
 	// opt.IsUpdate is a flag for update.
 	// If handle ID is changed when update, update will remove the old record first, and then call `AddRecord` to add a new record.
 	// Currently, only insert can set _tidb_rowid, update can not update _tidb_rowid.
 	rstat, ok := opt.Ctx.Value(StatKey{}).(*AddRecordStat)
+
+	misc := time.Now()
 	if len(r) > len(cols) && !opt.IsUpdate {
 		// The last value is _tidb_rowid.
 		recordID = r[len(r)-1].GetInt64()
@@ -465,6 +470,10 @@ func (t *tableCommon) AddRecord(ctx sessionctx.Context, r []types.Datum, opts ..
 			}
 		}
 	}
+	if ok {
+		rstat.Misc += time.Since(misc)
+	}
+
 	if !hasRecordID {
 		s2 := time.Now()
 		recordID, err = t.AllocHandle(ctx)
@@ -504,15 +513,16 @@ func (t *tableCommon) AddRecord(ctx sessionctx.Context, r []types.Datum, opts ..
 	colIDs = make([]int64, 0, len(r))
 	row = make([]types.Datum, 0, len(r))
 
+	s3 := time.Now()
 	writeBufs := sessVars.GetWriteStmtBufs()
 	adjustRowValuesBuf(writeBufs, len(row))
 	key := t.RecordKey(recordID)
 	sc := sessVars.StmtCtx
-	s3 := time.Now()
 	writeBufs.RowValBuf, err = tablecodec.EncodeRow(sc, row, colIDs, writeBufs.RowValBuf, writeBufs.AddRowValues)
 	if ok {
 		rstat.TotalEncode += time.Since(s3)
 	}
+
 	if err != nil {
 		return 0, err
 	}
@@ -552,6 +562,9 @@ func (t *tableCommon) AddRecord(ctx sessionctx.Context, r []types.Datum, opts ..
 		colSize[col.ID] = int64(size) - 1
 	}
 	// sessVars.TxnCtx.UpdateDeltaForTable(t.physicalTableID, 1, 1, colSize)
+	if ok {
+		rstat.Total += time.Since(tot)
+	}
 	return recordID, nil
 }
 
