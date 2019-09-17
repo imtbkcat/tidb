@@ -78,12 +78,33 @@ func (e *InsertExec) exec(ctx context.Context, rows [][]types.Datum) error {
 			return err
 		}
 	} else {
+		logutil.Eventf(ctx, "addrecord %d rows into table `%s` start", len(rows), stringutil.MemoizeStr(func() string {
+			var tblName string
+			if meta := e.Table.Meta(); meta != nil {
+				tblName = meta.Name.L
+			}
+			return tblName
+		}))
 		for _, row := range rows {
 			if _, err := e.addRecord(ctx, row); err != nil {
 				return err
 			}
 		}
+		logutil.Eventf(ctx, "addrecord %d rows into table `%s` ends", len(rows), stringutil.MemoizeStr(func() string {
+			var tblName string
+			if meta := e.Table.Meta(); meta != nil {
+				tblName = meta.Name.L
+			}
+			return tblName
+		}))
 	}
+	logutil.Eventf(ctx, "insert %d rows into table `%s` ends", len(rows), stringutil.MemoizeStr(func() string {
+		var tblName string
+		if meta := e.Table.Meta(); meta != nil {
+			tblName = meta.Name.L
+		}
+		return tblName
+	}))
 	return nil
 }
 
