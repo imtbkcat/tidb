@@ -70,6 +70,7 @@ type AddRecordStat struct {
 	TotalEncode time.Duration
 	TotalAllocID time.Duration
 	Total time.Duration
+	ValueSize time.Duration
 	Misc  time.Duration
 }
 
@@ -552,6 +553,7 @@ func (t *tableCommon) AddRecord(ctx sessionctx.Context, r []types.Datum, opts ..
 			return 0, err
 		}
 	}
+	valueSize := time.Now()
 	sc.AddAffectedRows(1)
 	colSize := make(map[int64]int64, len(r))
 	for id, col := range t.Cols() {
@@ -560,6 +562,9 @@ func (t *tableCommon) AddRecord(ctx sessionctx.Context, r []types.Datum, opts ..
 			continue
 		}
 		colSize[col.ID] = int64(size) - 1
+	}
+	if ok {
+		rstat.ValueSize += time.Since(valueSize)
 	}
 	// sessVars.TxnCtx.UpdateDeltaForTable(t.physicalTableID, 1, 1, colSize)
 	if ok {

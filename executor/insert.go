@@ -93,7 +93,7 @@ func (e *InsertExec) exec(ctx context.Context, rows [][]types.Datum) error {
 				return err
 			}
 		}
-		logutil.Eventf(ctx, "add record stat Set:%v  AllocId:%v  Encode:%v Misc:%v Total:%v", rstat.TotalAddTable, rstat.TotalAllocID, rstat.TotalEncode, rstat.Misc, rstat.Total)
+		logutil.Eventf(ctx, "add record stat Set:%v  AllocId:%v  Encode:%v Misc:%v ValueSize:%v Total:%v", rstat.TotalAddTable, rstat.TotalAllocID, rstat.TotalEncode, rstat.Misc, rstat.ValueSize,rstat.Total)
 		logutil.Eventf(ctx, "addrecord %d rows into table `%s` ends", len(rows), stringutil.MemoizeStr(func() string {
 			var tblName string
 			if meta := e.Table.Meta(); meta != nil {
