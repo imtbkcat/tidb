@@ -67,6 +67,8 @@ type StatKey struct {}
 
 type AddRecordStat struct {
 	TotalAddTable time.Duration
+	TotalEncode time.Duration
+	TotalAllocID time.Duration
 }
 
 // Table implements table.Table interface.
@@ -449,6 +451,7 @@ func (t *tableCommon) AddRecord(ctx sessionctx.Context, r []types.Datum, opts ..
 	// opt.IsUpdate is a flag for update.
 	// If handle ID is changed when update, update will remove the old record first, and then call `AddRecord` to add a new record.
 	// Currently, only insert can set _tidb_rowid, update can not update _tidb_rowid.
+	rstat, ok := opt.Ctx.Value(StatKey{}).(*AddRecordStat)
 	if len(r) > len(cols) && !opt.IsUpdate {
 		// The last value is _tidb_rowid.
 		recordID = r[len(r)-1].GetInt64()
@@ -463,9 +466,13 @@ func (t *tableCommon) AddRecord(ctx sessionctx.Context, r []types.Datum, opts ..
 		}
 	}
 	if !hasRecordID {
+		s2 := time.Now()
 		recordID, err = t.AllocHandle(ctx)
 		if err != nil {
 			return 0, err
+		}
+		if ok {
+			rstat.TotalAllocID += time.Since(s2)
 		}
 	}
 
@@ -526,22 +533,21 @@ func (t *tableCommon) AddRecord(ctx sessionctx.Context, r []types.Datum, opts ..
 	adjustRowValuesBuf(writeBufs, len(row))
 	key := t.RecordKey(recordID)
 	sc := sessVars.StmtCtx
+	s3 := time.Now()
 	writeBufs.RowValBuf, err = tablecodec.EncodeRow(sc, row, colIDs, writeBufs.RowValBuf, writeBufs.AddRowValues)
+	if ok {
+		rstat.TotalEncode += time.Since(s3)
+	}
 	if err != nil {
 		return 0, err
 	}
 	value := writeBufs.RowValBuf
-	rstat, ok := opt.Ctx.Value(StatKey{}).(*AddRecordStat)
+	s1 := time.Now()
+	if err = txn.Set(key, value); err != nil {
+		return 0, err
+	}
 	if ok {
-		s1 := time.Now()
-		if err = txn.Set(key, value); err != nil {
-			return 0, err
-		}
 		rstat.TotalAddTable += time.Since(s1)
-	} else {
-		if err = txn.Set(key, value); err != nil {
-			return 0, err
-		}
 	}
 	txn.SetAssertion(key, kv.None)
 
