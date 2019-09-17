@@ -31,8 +31,8 @@ import (
 )
 
 const (
-	minStep            = 1000
-	maxStep            = 2000000
+	minStep            = 2000000
+	maxStep            = 4000000
 	defaultConsumeTime = 10 * time.Second
 )
 
