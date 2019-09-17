@@ -72,6 +72,7 @@ type AddRecordStat struct {
 	Total time.Duration
 	ValueSize time.Duration
 	Misc  time.Duration
+	IsPK  time.Duration
 }
 
 // Table implements table.Table interface.
@@ -457,7 +458,7 @@ func (t *tableCommon) AddRecord(ctx sessionctx.Context, r []types.Datum, opts ..
 	// Currently, only insert can set _tidb_rowid, update can not update _tidb_rowid.
 	rstat, ok := opt.Ctx.Value(StatKey{}).(*AddRecordStat)
 
-
+	isPK := time.Now()
 	if len(r) > len(cols) && !opt.IsUpdate {
 		// The last value is _tidb_rowid.
 		recordID = r[len(r)-1].GetInt64()
@@ -471,6 +472,9 @@ func (t *tableCommon) AddRecord(ctx sessionctx.Context, r []types.Datum, opts ..
 			}
 		}
 	}
+	if ok {
+		rstat.IsPK += time.Since(isPK)
+	}
 
 	if !hasRecordID {
 		s2 := time.Now()
@@ -483,13 +487,13 @@ func (t *tableCommon) AddRecord(ctx sessionctx.Context, r []types.Datum, opts ..
 		}
 	}
 
+
+	misc := time.Now()
 	txn, err := ctx.Txn(true)
 	if err != nil {
 		return 0, err
 	}
-
 	sessVars := ctx.GetSessionVars()
-	misc := time.Now()
 	rm, err := t.getRollbackableMemStore(ctx)
 	var createIdxOpts []table.CreateIdxOptFunc
 	if len(opts) > 0 {
@@ -509,12 +513,11 @@ func (t *tableCommon) AddRecord(ctx sessionctx.Context, r []types.Datum, opts ..
 		rstat.Misc += time.Since(misc)
 	}
 
+	s3 := time.Now()
 	var colIDs, binlogColIDs []int64
 	var row, binlogRow []types.Datum
 	colIDs = make([]int64, 0, len(r))
 	row = make([]types.Datum, 0, len(r))
-
-	s3 := time.Now()
 	writeBufs := sessVars.GetWriteStmtBufs()
 	adjustRowValuesBuf(writeBufs, len(row))
 	key := t.RecordKey(recordID)
