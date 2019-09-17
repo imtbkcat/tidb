@@ -63,6 +63,7 @@ func (db *DB) Reset() {
 	db.length = 0
 	db.size = 0
 	db.arena.reset()
+	db.hint.height = 0
 }
 
 // Get gets the value for the given key. It returns nil if the
@@ -101,7 +102,7 @@ func (db *DB) Put(key []byte, v []byte) {
 			}
 
 			prev := hint.prev[recomputeHeight]
-			if prev != db.head && !prev.addr.isNull() && bytes.Compare(key, prev.getKey(arena.getFrom(prev.addr))) <= 0 {
+			if prev.addr != db.head.addr && !prev.addr.isNull() && bytes.Compare(key, prev.getKey(arena.getFrom(prev.addr))) <= 0 {
 				for prev.addr == hint.prev[recomputeHeight].addr {
 					recomputeHeight++
 				}
