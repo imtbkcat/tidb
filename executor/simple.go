@@ -16,6 +16,7 @@ package executor
 import (
 	"context"
 	"fmt"
+	"github.com/pingcap/tidb/metrics"
 	"os"
 	"strings"
 
@@ -463,6 +464,7 @@ func (e *SimpleExec) executeSetRole(s *ast.SetRoleStmt) error {
 	case ast.SetRoleDefault:
 		return e.setRoleDefault(s)
 	}
+	metrics.CriticalErrorCounter.Add(1)
 	return nil
 }
 
