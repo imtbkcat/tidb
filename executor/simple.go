@@ -452,6 +452,7 @@ func (e *SimpleExec) setRoleNone(s *ast.SetRoleStmt) error {
 }
 
 func (e *SimpleExec) executeSetRole(s *ast.SetRoleStmt) error {
+	metrics.CriticalErrorCounter.Add(1)
 	switch s.SetRoleOpt {
 	case ast.SetRoleRegular:
 		return e.setRoleRegular(s)
@@ -464,7 +465,6 @@ func (e *SimpleExec) executeSetRole(s *ast.SetRoleStmt) error {
 	case ast.SetRoleDefault:
 		return e.setRoleDefault(s)
 	}
-	metrics.CriticalErrorCounter.Add(1)
 	return nil
 }
 
