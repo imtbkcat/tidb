@@ -298,7 +298,6 @@ func (t *partitionedTable) locateKeyPartition(ctx sessionctx.Context, pi *model.
 	var err error
 	var isNull bool
 	ret, isNull, err := t.partitionExpr.Column.EvalInt(ctx, chunk.MutRowFromDatums(r).ToRow())
-	fmt.Println(t.partitionExpr.Column.String())
 	if err != nil {
 		return 0, err
 	}
