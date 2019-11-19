@@ -47,9 +47,6 @@ func buildTablePartitionInfo(ctx sessionctx.Context, d *ddl, s *ast.CreateTableS
 
 	// force-discard the unsupported types, even when @@tidb_enable_table_partition = 'on'
 	switch s.Partition.Tp {
-	case model.PartitionTypeKey:
-		// can't create a warning for KEY partition, it will fail an integration test :/
-		return nil, nil
 	case model.PartitionTypeList, model.PartitionTypeSystemTime:
 		ctx.GetSessionVars().StmtCtx.AppendWarning(errUnsupportedCreatePartition)
 		return nil, nil
@@ -76,6 +73,9 @@ func buildTablePartitionInfo(ctx sessionctx.Context, d *ddl, s *ast.CreateTableS
 		// Partition by hash is enabled by default.
 		// Note that linear hash is not enabled.
 		if s.Partition.Tp == model.PartitionTypeHash {
+			enable = true
+		}
+		if s.Partition.Tp == model.PartitionTypeKey {
 			enable = true
 		}
 	}
@@ -112,8 +112,32 @@ func buildTablePartitionInfo(ctx sessionctx.Context, d *ddl, s *ast.CreateTableS
 		if err := buildHashPartitionDefinitions(ctx, d, s, pi); err != nil {
 			return nil, errors.Trace(err)
 		}
+	} else if s.Partition.Tp == model.PartitionTypeKey {
+		if err := buildKeyPartitionDefinitions(ctx, d, s, pi); err != nil {
+			return nil, errors.Trace(err)
+		}
 	}
 	return pi, nil
+}
+
+func buildKeyPartitionDefinitions(ctx sessionctx.Context, d *ddl, s *ast.CreateTableStmt, pi *model.PartitionInfo) error {
+	genIDs, err := d.genGlobalIDs(int(pi.Num))
+	if err != nil {
+		return errors.Trace(err)
+	}
+	defs := make([]model.PartitionDefinition, pi.Num)
+	for i := 0; i < len(defs); i++ {
+		defs[i].ID = genIDs[i]
+		if len(s.Partition.Definitions) == 0 {
+			defs[i].Name = model.NewCIStr(fmt.Sprintf("p%v", i))
+		} else {
+			def := s.Partition.Definitions[i]
+			defs[i].Name = def.Name
+			defs[i].Comment, _ = def.Comment()
+		}
+	}
+	pi.Definitions = defs
+	return nil
 }
 
 func buildHashPartitionDefinitions(ctx sessionctx.Context, d *ddl, s *ast.CreateTableStmt, pi *model.PartitionInfo) error {

@@ -29,6 +29,7 @@ import (
 	"github.com/pingcap/tidb/types"
 	"github.com/pingcap/tidb/util/chunk"
 	"github.com/pingcap/tidb/util/logutil"
+	"github.com/pingcap/tidb/util/math"
 	"github.com/pingcap/tidb/util/mock"
 	"go.uber.org/zap"
 )
@@ -73,6 +74,8 @@ func newPartitionedTable(tbl *Table, tblInfo *model.TableInfo) (table.Table, err
 		partitionExpr, err = generatePartitionExpr(tblInfo)
 	case model.PartitionTypeHash:
 		partitionExpr, err = generateHashPartitionExpr(tblInfo)
+	case model.PartitionTypeKey:
+		partitionExpr, err = generateKeyPartitionExpr(tblInfo)
 	}
 	if err != nil {
 		return nil, errors.Trace(err)
@@ -113,6 +116,9 @@ type PartitionExpr struct {
 	UpperBounds []expression.Expression
 	// Expr is the hash partition expression.
 	Expr expression.Expression
+	// Just use for hash partition.
+	IsKeyPartition bool
+	PatitionNum    uint64
 }
 
 // rangePartitionString returns the partition string for a range typed partition.
@@ -129,6 +135,32 @@ func rangePartitionString(pi *model.PartitionInfo) string {
 
 	// partition by range columns (c1, c2, ...)
 	panic("create table assert len(columns) = 1")
+}
+
+func generateKeyPartitionExpr(tblInfo *model.TableInfo) (*PartitionExpr, error) {
+	var column *expression.Column
+	// The caller should assure partition info is not nil.
+	pi := tblInfo.GetPartitionInfo()
+	ctx := mock.NewContext()
+	partitionPruneExprs := make([]expression.Expression, 0, len(pi.Definitions))
+	dbName := model.NewCIStr(ctx.GetSessionVars().CurrentDB)
+	columns, names := expression.ColumnInfos2ColumnsAndNames(ctx, dbName, tblInfo.Name, tblInfo.Columns)
+	partStr := rangePartitionString(pi)
+	for i, name := range names {
+		if name.ColName.L == partStr {
+			column = columns[i]
+		}
+	}
+	for i := 0; i < len(pi.Definitions); i++ {
+		partitionPruneExprs = append(partitionPruneExprs, column)
+	}
+	return &PartitionExpr{
+		Column:         column,
+		Expr:           column,
+		Ranges:         partitionPruneExprs,
+		IsKeyPartition: true,
+		PatitionNum:    pi.Num,
+	}, nil
 }
 
 func generatePartitionExpr(tblInfo *model.TableInfo) (*PartitionExpr, error) {
@@ -253,11 +285,28 @@ func (t *partitionedTable) locatePartition(ctx sessionctx.Context, pi *model.Par
 		idx, err = t.locateRangePartition(ctx, pi, r)
 	case model.PartitionTypeHash:
 		idx, err = t.locateHashPartition(ctx, pi, r)
+	case model.PartitionTypeKey:
+		idx, err = t.locateKeyPartition(ctx, pi, r)
 	}
 	if err != nil {
 		return 0, errors.Trace(err)
 	}
 	return pi.Definitions[idx].ID, nil
+}
+
+func (t *partitionedTable) locateKeyPartition(ctx sessionctx.Context, pi *model.PartitionInfo, r []types.Datum) (int, error) {
+	var err error
+	var isNull bool
+	ret, isNull, err := t.partitionExpr.Column.EvalInt(ctx, chunk.MutRowFromDatums(r).ToRow())
+	fmt.Println(t.partitionExpr.Column.String())
+	if err != nil {
+		return 0, err
+	}
+	if isNull {
+		return 0, nil
+	} else {
+		return int(uint64(math.Abs(ret)) % pi.Num), nil
+	}
 }
 
 func (t *partitionedTable) locateRangePartition(ctx sessionctx.Context, pi *model.PartitionInfo, r []types.Datum) (int, error) {

@@ -56,6 +56,8 @@ type PointGetPlan struct {
 	IsForUpdate      bool
 	outputNames      []*types.FieldName
 	LockWaitTime     int64
+	IsPartition      bool
+	Pid              int64
 }
 
 type nameValuePair struct {
@@ -533,8 +535,13 @@ func tryPointGetPlan(ctx sessionctx.Context, selStmt *ast.SelectStmt) *PointGetP
 	// Table partition implementation translates LogicalPlan from `DataSource` to
 	// `Union -> DataSource` in the logical plan optimization pass, since PointGetPlan
 	// bypass the logical plan optimization, it can't support partitioned table.
+	var isPartition bool
 	if tbl.GetPartitionInfo() != nil {
-		return nil
+		if tbl.GetPartitionInfo().Type == model.PartitionTypeKey {
+			isPartition = true
+		} else {
+			return nil
+		}
 	}
 	for _, col := range tbl.Columns {
 		// Do not handle generated columns.
@@ -562,6 +569,7 @@ func tryPointGetPlan(ctx sessionctx.Context, selStmt *ast.SelectStmt) *PointGetP
 			dbName = ctx.GetSessionVars().CurrentDB
 		}
 		p := newPointGetPlan(ctx, dbName, schema, tbl, names)
+		p.IsPartition = isPartition
 		intDatum, err := handlePair.value.ConvertTo(ctx.GetSessionVars().StmtCtx, fieldType)
 		if err != nil {
 			if terror.ErrorEqual(types.ErrOverflow, err) {

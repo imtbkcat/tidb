@@ -39,6 +39,7 @@ func (b *executorBuilder) buildPointGet(p *plannercore.PointGetPlan) Executor {
 	e := &PointGetExecutor{
 		baseExecutor: newBaseExecutor(b.ctx, p.Schema(), p.ExplainID()),
 	}
+	e.isPartition = p.IsPartition
 	e.base().initCap = 1
 	e.base().maxChunkSize = 1
 	b.isSelectForUpdate = p.IsForUpdate
@@ -59,6 +60,7 @@ type PointGetExecutor struct {
 	done         bool
 	lock         bool
 	lockWaitTime int64
+	isPartition  bool
 }
 
 // Init set fields needed for PointGetExecutor reuse, this does NOT change baseExecutor field
@@ -102,7 +104,7 @@ func (e *PointGetExecutor) Next(ctx context.Context, req *chunk.Chunk) error {
 	if e.ctx.GetSessionVars().GetReplicaRead().IsFollowerRead() {
 		e.snapshot.SetOption(kv.ReplicaRead, kv.ReplicaReadFollower)
 	}
-	if e.idxInfo != nil {
+	if e.idxInfo != nil && !e.isPartition {
 		idxKey, err1 := encodeIndexKey(e.base(), e.tblInfo, e.idxInfo, e.idxVals)
 		if err1 != nil && !kv.ErrNotExist.Equal(err1) {
 			return err1
@@ -134,8 +136,15 @@ func (e *PointGetExecutor) Next(ctx context.Context, req *chunk.Chunk) error {
 			failpoint.InjectContext(ctx, "pointGetRepeatableReadTest-step2", nil)
 		})
 	}
-
-	key := tablecodec.EncodeRowKeyWithHandle(e.tblInfo.ID, e.handle)
+	var tableID int64
+	if e.isPartition {
+		 pi := e.tblInfo.GetPartitionInfo()
+		 idx := e.handle % int64(pi.Num)
+		 tableID = pi.Definitions[idx].ID
+	} else {
+		tableID = e.tblInfo.ID
+	}
+	key := tablecodec.EncodeRowKeyWithHandle(tableID, e.handle)
 	val, err := e.get(ctx, key)
 	if err != nil && !kv.ErrNotExist.Equal(err) {
 		return err
