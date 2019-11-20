@@ -119,6 +119,7 @@ type PartitionExpr struct {
 	// Just use for hash partition.
 	IsKeyPartition bool
 	PatitionNum    uint64
+	ColumnName     model.CIStr
 }
 
 // rangePartitionString returns the partition string for a range typed partition.
@@ -160,6 +161,7 @@ func generateKeyPartitionExpr(tblInfo *model.TableInfo) (*PartitionExpr, error) 
 		Ranges:         partitionPruneExprs,
 		IsKeyPartition: true,
 		PatitionNum:    pi.Num,
+		ColumnName:     pi.Columns[0],
 	}, nil
 }
 
@@ -371,6 +373,32 @@ func (t *partitionedTable) GetPartition(pid int64) table.PhysicalTable {
 		return nil
 	}
 	return p
+}
+
+// Type implement Table.Type()
+func (t *partitionedTable) Type() table.Type {
+	return table.PartitionTable
+}
+
+// FastLocateAndAddRecord used for inserting data into key partition table.
+func (t *partitionedTable) FastLocateAndAddRecord(ctx sessionctx.Context, r []types.Datum, cols []*table.Column, opts ...table.AddRecordOption) (recordID int64, err error) {
+	pi := t.meta.GetPartitionInfo()
+	if !t.PartitionExpr().IsKeyPartition {
+		return t.AddRecord(ctx, r, opts...)
+	} else {
+		var idx int64
+		var val int64
+		for i, col := range cols {
+			if col.Name.L == t.partitionExpr.ColumnName.L {
+				val = r[cols[i].Offset].GetInt64()
+			}
+			idx = val % int64(t.Meta().Partition.Num)
+			pid := pi.Definitions[idx].ID
+			tbl := t.GetPartition(pid)
+			return tbl.AddRecord(ctx, r, opts...)
+		}
+		return 0, nil
+	}
 }
 
 // GetPartitionByRow returns a Table, which is actually a Partition.

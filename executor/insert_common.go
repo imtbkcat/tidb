@@ -866,6 +866,17 @@ func (e *InsertValues) addRecord(ctx context.Context, row []types.Datum) (int64,
 	if !e.ctx.GetSessionVars().ConstraintCheckInPlace {
 		txn.SetOption(kv.PresumeKeyNotExists, nil)
 	}
+	if e.Table.Type() == table.PartitionTable {
+		partitionTable := e.Table.(table.PartitionedTable)
+		h, err := partitionTable.FastLocateAndAddRecord(e.ctx, row, e.insertColumns, table.WithCtx(ctx))
+		if err != nil {
+			return 0, err
+		}
+		if e.lastInsertID != 0 {
+			e.ctx.GetSessionVars().SetLastInsertID(e.lastInsertID)
+		}
+		return h, nil
+	}
 	h, err := e.Table.AddRecord(e.ctx, row, table.WithCtx(ctx))
 	txn.DelOption(kv.PresumeKeyNotExists)
 	if err != nil {

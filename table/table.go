@@ -40,6 +40,8 @@ const (
 	VirtualTable
 	// MemoryTable , store data only in local memory.
 	MemoryTable
+	// PartitionTable, shard data into multi partition.
+	PartitionTable
 )
 
 const (
@@ -222,6 +224,7 @@ type PartitionedTable interface {
 	Table
 	GetPartition(physicalID int64) PhysicalTable
 	GetPartitionByRow(sessionctx.Context, []types.Datum) (Table, error)
+	FastLocateAndAddRecord(ctx sessionctx.Context, r []types.Datum, cols []*Column, opts ...AddRecordOption) (recordID int64, err error)
 }
 
 // TableFromMeta builds a table.Table from *model.TableInfo.

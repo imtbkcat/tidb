@@ -138,9 +138,9 @@ func (e *PointGetExecutor) Next(ctx context.Context, req *chunk.Chunk) error {
 	}
 	var tableID int64
 	if e.isPartition {
-		 pi := e.tblInfo.GetPartitionInfo()
-		 idx := e.handle % int64(pi.Num)
-		 tableID = pi.Definitions[idx].ID
+		pi := e.tblInfo.GetPartitionInfo()
+		idx := e.handle % int64(pi.Num)
+		tableID = pi.Definitions[idx].ID
 	} else {
 		tableID = e.tblInfo.ID
 	}
