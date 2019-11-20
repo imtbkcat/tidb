@@ -439,13 +439,28 @@ func (t *partitionedTable) RemoveRecord(ctx sessionctx.Context, h int64, r []typ
 // Length of `oldData` and `newData` equals to length of `t.WritableCols()`.
 func (t *partitionedTable) UpdateRecord(ctx sessionctx.Context, h int64, currData, newData []types.Datum, touched []bool) error {
 	partitionInfo := t.meta.GetPartitionInfo()
-	from, err := t.locatePartition(ctx, partitionInfo, currData)
-	if err != nil {
-		return errors.Trace(err)
-	}
-	to, err := t.locatePartition(ctx, partitionInfo, newData)
-	if err != nil {
-		return errors.Trace(err)
+	var from, to int64
+	var err error
+	if partitionInfo.Type == model.PartitionTypeKey {
+		for _, col := range t.Columns {
+			if col.Name.L == partitionInfo.Columns[0].L {
+				offset := col.Offset
+				from = currData[offset].GetInt64() % int64(partitionInfo.Num)
+				to = newData[offset].GetInt64() % int64(partitionInfo.Num)
+				from = partitionInfo.Definitions[from].ID
+				to = partitionInfo.Definitions[to].ID
+				break
+			}
+		}
+	} else {
+		from, err = t.locatePartition(ctx, partitionInfo, currData)
+		if err != nil {
+			return errors.Trace(err)
+		}
+		to, err = t.locatePartition(ctx, partitionInfo, newData)
+		if err != nil {
+			return errors.Trace(err)
+		}
 	}
 
 	// The old and new data locate in different partitions.
@@ -468,7 +483,6 @@ func (t *partitionedTable) UpdateRecord(ctx sessionctx.Context, h int64, currDat
 		}
 		return nil
 	}
-
 	tbl := t.GetPartition(to)
 	return tbl.UpdateRecord(ctx, h, currData, newData, touched)
 }
