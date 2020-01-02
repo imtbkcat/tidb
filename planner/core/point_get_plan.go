@@ -612,7 +612,8 @@ func tryPointGetPlan(ctx sessionctx.Context, selStmt *ast.SelectStmt) *PointGetP
 		p.UnsignedHandle = mysql.HasUnsignedFlag(fieldType.Flag)
 		p.HandleParam = handlePair.param
 		if pi != nil {
-			exprs, err := expression.ParseSimpleExprsWithNames(ctx, pi.Expr, schema, names)
+			partitionSchema, colNames := buildSchemaForPartition(tblName.Schema, tbl, tblAlias)
+			exprs, err := expression.ParseSimpleExprsWithNames(ctx, pi.Expr, partitionSchema, colNames)
 			if err != nil {
 				return nil
 			}
@@ -691,6 +692,21 @@ func checkFastPlanPrivilege(ctx sessionctx.Context, dbName, tableName string, ch
 		}
 	}
 	return nil
+}
+
+func buildSchemaForPartition(dbName model.CIStr, tbl *model.TableInfo, tblName model.CIStr) (*expression.Schema, []*types.FieldName) {
+	columns := make([]*expression.Column, 0, len(tbl.Columns)+1)
+	names := make([]*types.FieldName, 0, len(tbl.Columns)+1)
+	for _, col := range tbl.Columns {
+		names = append(names, &types.FieldName{
+			DBName:      dbName,
+			OrigTblName: tbl.Name,
+			TblName:     tblName,
+			ColName:     col.Name,
+		})
+		columns = append(columns, colInfoToColumn(col, len(columns)))
+	}
+	return expression.NewSchema(columns...), names
 }
 
 func buildSchemaFromFields(
@@ -1028,7 +1044,6 @@ func locateHashPartition(piExpr expression.Expression, pairs []nameValuePair) (i
 	switch pi := piExpr.(type) {
 	case *expression.Column:
 		for _, p := range pairs {
-			fmt.Printf("org:%s col:%s\n", pi.OrigName, p.colName)
 			if p.colName == pi.OrigName && p.param == nil {
 				switch p.value.Kind() {
 				case types.KindInt64:
