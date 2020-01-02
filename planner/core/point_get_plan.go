@@ -1044,7 +1044,7 @@ func locateHashPartition(piExpr expression.Expression, pairs []nameValuePair) (i
 	switch pi := piExpr.(type) {
 	case *expression.Column:
 		for _, p := range pairs {
-			if p.colName == pi.OrigName && p.param == nil {
+			if p.colName == pi.OrigName {
 				switch p.value.Kind() {
 				case types.KindInt64:
 					return p.value.GetInt64(), true
