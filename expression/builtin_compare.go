@@ -15,6 +15,7 @@ package expression
 
 import (
 	"context"
+	"fmt"
 	"math"
 
 	"github.com/pingcap/parser/ast"
@@ -179,7 +180,7 @@ func (c *coalesceFunctionClass) getFunction(ctx sessionctx.Context, args []Expre
 		// Set the field length to maxFlen for other types.
 		if bf.tp.Flen > mysql.MaxDecimalWidth {
 			bf.tp.Flen = mysql.MaxDecimalWidth
-			logutil.Logger(context.Background()).Warn("set field type Flen to MaxDecimalWidth", zap.String("sql", ctx.GetSessionVars().StmtCtx.OriginalSQL), zap.Stack("stack"))
+			logutil.Logger(context.Background()).Warn("set field type Flen to MaxDecimalWidth", zap.String("address bf", fmt.Sprintf("%p", bf.tp)), zap.String("sql", ctx.GetSessionVars().StmtCtx.OriginalSQL), zap.Stack("stack"))
 		}
 	}
 

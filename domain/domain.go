@@ -15,6 +15,7 @@ package domain
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"sync"
 	"sync/atomic"
@@ -95,6 +96,14 @@ func (do *Domain) loadInfoSchema(handle *infoschema.Handle, usedSchemaVersion in
 
 	// Update self schema version to etcd.
 	defer func() {
+		tbl, err1 := do.InfoSchema().TableByName(model.NewCIStr("hdw"), model.NewCIStr("dw_omt_perform_info"))
+		if tbl != nil && err1 == nil {
+			for _, col := range tbl.Meta().Columns {
+				if col.Name.L == "perf_all_amt" {
+					logutil.Logger(context.Background()).Warn("The address of FieldType of perf_all_amt is: ", zap.String("address", fmt.Sprintf("%p", &col.FieldType)))
+				}
+			}
+		}
 		// There are two possibilities for not updating the self schema version to etcd.
 		// 1. Failed to loading schema information.
 		// 2. When users use history read feature, the neededSchemaVersion isn't the latest schema version.
