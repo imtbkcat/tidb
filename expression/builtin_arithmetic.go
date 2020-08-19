@@ -896,8 +896,6 @@ func (c *arithmeticModFunctionClass) getFunction(ctx sessionctx.Context, args []
 		if bf.tp.Flen == mysql.MaxDecimalWidth {
 			logutil.Logger(context.Background()).Warn("set field type Flen to MaxDecimalWidth", zap.String("sql",
 				ctx.GetSessionVars().StmtCtx.OriginalSQL), zap.String("address bf", fmt.Sprintf("%p", bf.tp)),
-				zap.String("address args0", fmt.Sprintf("%p", args[0].GetType())),
-				zap.String("address args1", fmt.Sprintf("%p", args[1].GetType())),
 				zap.Stack("stack"))
 		}
 		if mysql.HasUnsignedFlag(lhsTp.Flag) {
@@ -911,8 +909,6 @@ func (c *arithmeticModFunctionClass) getFunction(ctx sessionctx.Context, args []
 		if bf.tp.Flen == mysql.MaxDecimalWidth {
 			logutil.Logger(context.Background()).Warn("set field type Flen to MaxDecimalWidth", zap.String("sql",
 				ctx.GetSessionVars().StmtCtx.OriginalSQL), zap.String("address bf", fmt.Sprintf("%p", bf.tp)),
-				zap.String("address args0", fmt.Sprintf("%p", args[0].GetType())),
-				zap.String("address args1", fmt.Sprintf("%p", args[1].GetType())),
 				zap.Stack("stack"))
 		}
 		if mysql.HasUnsignedFlag(lhsTp.Flag) {
