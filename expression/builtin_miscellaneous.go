@@ -14,8 +14,11 @@ package expression
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"fmt"
+	"github.com/pingcap/tidb/util/logutil"
+	"go.uber.org/zap"
 	"math"
 	"net"
 	"strings"
@@ -230,6 +233,9 @@ func (c *anyValueFunctionClass) getFunction(ctx sessionctx.Context, args []Expre
 	argTp := args[0].GetType().EvalType()
 	bf := newBaseBuiltinFuncWithTp(ctx, args, argTp, argTp)
 	args[0].GetType().Flag |= bf.tp.Flag
+	if bf.tp.Tp == mysql.TypeNewDecimal || bf.tp.Tp == mysql.TypeDecimal {
+		logutil.Logger(context.Background()).Warn("copy FieldTyep here", zap.String("address", fmt.Sprintf("%p", bf.tp)), zap.Int("prev Flen", bf.tp.Flen), zap.Int("after Flen", args[0].GetType().Flen), zap.String("sql", ctx.GetSessionVars().StmtCtx.OriginalSQL), zap.Stack("stack"))
+	}
 	*bf.tp = *args[0].GetType()
 	var sig builtinFunc
 	switch argTp {
@@ -836,6 +842,10 @@ func (c *nameConstFunctionClass) getFunction(ctx sessionctx.Context, args []Expr
 	}
 	argTp := args[1].GetType().EvalType()
 	bf := newBaseBuiltinFuncWithTp(ctx, args, argTp, types.ETString, argTp)
+	if bf.tp.Tp == mysql.TypeNewDecimal || bf.tp.Tp == mysql.TypeDecimal {
+		logutil.Logger(context.Background()).Warn("copy FieldTyep here", zap.String("address", fmt.Sprintf("%p", bf.tp)), zap.Int("prev Flen", bf.tp.Flen), zap.Int("after Flen", args[1].GetType().Flen), zap.String("sql",
+			ctx.GetSessionVars().StmtCtx.OriginalSQL), zap.Stack("stack"))
+	}
 	*bf.tp = *args[1].GetType()
 	var sig builtinFunc
 	switch argTp {

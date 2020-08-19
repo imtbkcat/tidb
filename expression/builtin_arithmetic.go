@@ -116,18 +116,18 @@ func setFlenDecimal4RealOrDecimal(retTp, a, b *types.FieldType, isReal bool, isM
 			return
 		}
 		retTp.Flen = mathutil.Min(retTp.Flen, mysql.MaxDecimalWidth)
-		logutil.Logger(context.Background()).Warn("set field type Flen to MaxDecimalWidth", zap.String("a address", fmt.Sprintf("%p", a)),
-			zap.String("b address", fmt.Sprintf("%p", b)),
-			zap.String("retTp address", fmt.Sprintf("%p", retTp)),
-			zap.Stack("stack"))
+		if retTp.Flen == mysql.MaxDecimalWidth {
+			logutil.Logger(context.Background()).Warn("set field type Flen to MaxDecimalWidth",
+				zap.String("retTp address", fmt.Sprintf("%p", retTp)),
+				zap.Stack("stack"))
+		}
 		return
 	}
 	if isReal {
 		retTp.Flen, retTp.Decimal = types.UnspecifiedLength, types.UnspecifiedLength
 	} else {
 		retTp.Flen, retTp.Decimal = mysql.MaxDecimalWidth, mysql.MaxDecimalScale
-		logutil.Logger(context.Background()).Warn("set field type Flen to MaxDecimalWidth", zap.String("a address", fmt.Sprintf("%p", a)),
-			zap.String("b address", fmt.Sprintf("%p", b)),
+		logutil.Logger(context.Background()).Warn("set field type Flen to MaxDecimalWidth",
 			zap.String("retTp address", fmt.Sprintf("%p", retTp)),
 			zap.Stack("stack"))
 	}
@@ -147,8 +147,7 @@ func (c *arithmeticDivideFunctionClass) setType4DivDecimal(retTp, a, b *types.Fi
 	}
 	if a.Flen == types.UnspecifiedLength {
 		retTp.Flen = mysql.MaxDecimalWidth
-		logutil.Logger(context.Background()).Warn("set field type Flen to MaxDecimalWidth", zap.String("a address", fmt.Sprintf("%p", a)),
-			zap.String("b address", fmt.Sprintf("%p", b)),
+		logutil.Logger(context.Background()).Warn("set field type Flen to MaxDecimalWidth",
 			zap.String("retTp address", fmt.Sprintf("%p", retTp)),
 			zap.Stack("stack"))
 		return
@@ -156,8 +155,7 @@ func (c *arithmeticDivideFunctionClass) setType4DivDecimal(retTp, a, b *types.Fi
 	retTp.Flen = a.Flen + decb + precIncrement
 	if retTp.Flen > mysql.MaxDecimalWidth {
 		retTp.Flen = mysql.MaxDecimalWidth
-		logutil.Logger(context.Background()).Warn("set field type Flen to MaxDecimalWidth", zap.String("a address", fmt.Sprintf("%p", a)),
-			zap.String("b address", fmt.Sprintf("%p", b)),
+		logutil.Logger(context.Background()).Warn("set field type Flen to MaxDecimalWidth",
 			zap.String("retTp address", fmt.Sprintf("%p", retTp)),
 			zap.Stack("stack"))
 	}
@@ -184,8 +182,6 @@ func (c *arithmeticPlusFunctionClass) getFunction(ctx sessionctx.Context, args [
 		if bf.tp.Flen == mysql.MaxDecimalWidth {
 			logutil.Logger(context.Background()).Warn("set field type Flen to MaxDecimalWidth", zap.String("sql",
 				ctx.GetSessionVars().StmtCtx.OriginalSQL), zap.String("address bf", fmt.Sprintf("%p", bf.tp)),
-				zap.String("address args0", fmt.Sprintf("%p", args[0].GetType())),
-				zap.String("address args1", fmt.Sprintf("%p", args[1].GetType())),
 				zap.Stack("stack"))
 		}
 		sig := &builtinArithmeticPlusRealSig{bf}
@@ -197,8 +193,6 @@ func (c *arithmeticPlusFunctionClass) getFunction(ctx sessionctx.Context, args [
 		if bf.tp.Flen == mysql.MaxDecimalWidth {
 			logutil.Logger(context.Background()).Warn("set field type Flen to MaxDecimalWidth", zap.String("sql",
 				ctx.GetSessionVars().StmtCtx.OriginalSQL), zap.String("address bf", fmt.Sprintf("%p", bf.tp)),
-				zap.String("address args0", fmt.Sprintf("%p", args[0].GetType())),
-				zap.String("address args1", fmt.Sprintf("%p", args[1].GetType())),
 				zap.Stack("stack"))
 		}
 		sig := &builtinArithmeticPlusDecimalSig{bf}
@@ -336,8 +330,6 @@ func (c *arithmeticMinusFunctionClass) getFunction(ctx sessionctx.Context, args 
 		if bf.tp.Flen == mysql.MaxDecimalWidth {
 			logutil.Logger(context.Background()).Warn("set field type Flen to MaxDecimalWidth", zap.String("sql",
 				ctx.GetSessionVars().StmtCtx.OriginalSQL), zap.String("address bf", fmt.Sprintf("%p", bf.tp)),
-				zap.String("address args0", fmt.Sprintf("%p", args[0].GetType())),
-				zap.String("address args1", fmt.Sprintf("%p", args[1].GetType())),
 				zap.Stack("stack"))
 		}
 		sig := &builtinArithmeticMinusRealSig{bf}
@@ -349,8 +341,6 @@ func (c *arithmeticMinusFunctionClass) getFunction(ctx sessionctx.Context, args 
 		if bf.tp.Flen == mysql.MaxDecimalWidth {
 			logutil.Logger(context.Background()).Warn("set field type Flen to MaxDecimalWidth", zap.String("sql",
 				ctx.GetSessionVars().StmtCtx.OriginalSQL), zap.String("address bf", fmt.Sprintf("%p", bf.tp)),
-				zap.String("address args0", fmt.Sprintf("%p", args[0].GetType())),
-				zap.String("address args1", fmt.Sprintf("%p", args[1].GetType())),
 				zap.Stack("stack"))
 		}
 		sig := &builtinArithmeticMinusDecimalSig{bf}
@@ -499,8 +489,6 @@ func (c *arithmeticMultiplyFunctionClass) getFunction(ctx sessionctx.Context, ar
 		if bf.tp.Flen == mysql.MaxDecimalWidth {
 			logutil.Logger(context.Background()).Warn("set field type Flen to MaxDecimalWidth", zap.String("sql",
 				ctx.GetSessionVars().StmtCtx.OriginalSQL), zap.String("address bf", fmt.Sprintf("%p", bf.tp)),
-				zap.String("address args0", fmt.Sprintf("%p", args[0].GetType())),
-				zap.String("address args1", fmt.Sprintf("%p", args[1].GetType())),
 				zap.Stack("stack"))
 		}
 		sig := &builtinArithmeticMultiplyRealSig{bf}
@@ -512,8 +500,6 @@ func (c *arithmeticMultiplyFunctionClass) getFunction(ctx sessionctx.Context, ar
 		if bf.tp.Flen == mysql.MaxDecimalWidth {
 			logutil.Logger(context.Background()).Warn("set field type Flen to MaxDecimalWidth", zap.String("sql",
 				ctx.GetSessionVars().StmtCtx.OriginalSQL), zap.String("address bf", fmt.Sprintf("%p", bf.tp)),
-				zap.String("address args0", fmt.Sprintf("%p", args[0].GetType())),
-				zap.String("address args1", fmt.Sprintf("%p", args[1].GetType())),
 				zap.Stack("stack"))
 		}
 		sig := &builtinArithmeticMultiplyDecimalSig{bf}
@@ -656,8 +642,6 @@ func (c *arithmeticDivideFunctionClass) getFunction(ctx sessionctx.Context, args
 	if bf.tp.Flen == mysql.MaxDecimalWidth {
 		logutil.Logger(context.Background()).Warn("set field type Flen to MaxDecimalWidth", zap.String("sql",
 			ctx.GetSessionVars().StmtCtx.OriginalSQL), zap.String("address bf", fmt.Sprintf("%p", bf.tp)),
-			zap.String("address args0", fmt.Sprintf("%p", args[0].GetType())),
-			zap.String("address args1", fmt.Sprintf("%p", args[1].GetType())),
 			zap.Stack("stack"))
 	}
 	sig := &builtinArithmeticDivideDecimalSig{bf}
@@ -890,8 +874,7 @@ func (c *arithmeticModFunctionClass) setType4ModRealOrDecimal(retTp, a, b *types
 		if isDecimal {
 			retTp.Flen = mathutil.Min(retTp.Flen, mysql.MaxDecimalWidth)
 			if retTp.Flen == mysql.MaxDecimalWidth {
-				logutil.Logger(context.Background()).Warn("set field type Flen to MaxDecimalWidth", zap.String("a address", fmt.Sprintf("%p", a)),
-					zap.String("b address", fmt.Sprintf("%p", b)),
+				logutil.Logger(context.Background()).Warn("set field type Flen to MaxDecimalWidth",
 					zap.String("retTp address", fmt.Sprintf("%p", retTp)),
 					zap.Stack("stack"))
 			}

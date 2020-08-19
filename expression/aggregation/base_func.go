@@ -335,6 +335,9 @@ func (a *baseFuncDesc) WrapCastForAggArgs(ctx sessionctx.Context) {
 		// originTp is used when the the `Tp` of column is TypeFloat32 while
 		// the type of the aggregation function is TypeFloat64.
 		originTp := a.Args[i].GetType().Tp
+		if originTp == mysql.TypeNewDecimal || originTp == mysql.TypeDecimal {
+			logutil.Logger(context.Background()).Warn("copy FieldTyep here", zap.String("address", fmt.Sprintf("%p", a.Args[i].GetType())), zap.Int("prev Flen", a.Args[i].GetType().Flen), zap.Int("after Flen", a.RetTp.Flen), zap.String("sql", ctx.GetSessionVars().StmtCtx.OriginalSQL), zap.Stack("stack"))
+		}
 		*(a.Args[i].GetType()) = *(a.RetTp)
 		a.Args[i].GetType().Tp = originTp
 	}
